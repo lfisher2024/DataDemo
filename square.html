@@ -1,37 +1,37 @@
-import matplotlib.pyplot as plt
-import matplotlib.animation as animation
-import numpy as np
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Spinning Square</title>
+  <style>
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+      background: #111;
+    }
 
-# Create a figure and axis
-fig, ax = plt.subplots()
-ax.set_xlim(-2, 2)
-ax.set_ylim(-2, 2)
-ax.set_aspect('equal')
+    .square {
+      width: 150px;
+      height: 150px;
+      background-color: #4cafef;
+      animation: spin 3s linear infinite;
+    }
 
-# Define the square's initial coordinates
-square = np.array([
-    [-1, -1],
-    [1, -1],
-    [1, 1],
-    [-1, 1],
-    [-1, -1]  # Close the square
-])
-
-# Plot the initial square
-line, = ax.plot(square[:, 0], square[:, 1], 'b-')
-
-# Function to rotate the square
-def update(frame):
-    angle = np.radians(frame)
-    rotation_matrix = np.array([
-        [np.cos(angle), -np.sin(angle)],
-        [np.sin(angle), np.cos(angle)]
-    ])
-    rotated_square = square @ rotation_matrix.T
-    line.set_data(rotated_square[:, 0], rotated_square[:, 1])
-    return line,
-
-# Create the animation
-ani = animation.FuncAnimation(fig, update, frames=np.arange(0, 360, 2), interval=50, blit=True)
-
-plt.show()
+    @keyframes spin {
+      0% {
+        transform: rotate(0deg);
+      }
+      100% {
+        transform: rotate(360deg);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="square"></div>
+</body>
+</html>
