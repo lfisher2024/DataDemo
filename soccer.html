@@ -20,28 +20,45 @@
     border: 2px solid #fff;
     display: block;
   }
+  #status {
+    position: absolute;
+    top: 20px;
+    font-size: 24px;
+    text-align: center;
+    width: 100%;
+  }
 </style>
 </head>
 <body>
+<div id="status"></div>
 <canvas id="game" width="400" height="500"></canvas>
 <script>
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
+const statusDiv = document.getElementById('status');
 
-const ROWS = 8;
-const COLS = 10;
 const RADIUS = 18;
 const COLORS = ['red', 'green', 'blue', 'yellow', 'purple'];
 
 let grid = [];
-let shooter = { x: canvas.width / 2, y: canvas.height - 30, color: COLORS[Math.floor(Math.random()*COLORS.length)], angle: 0 };
+let shooter = { x: canvas.width / 2, y: canvas.height - 30, color: randomColor(), angle: -Math.PI/2 };
 let bullet = null;
+let gameOver = false;
+let level = 1;
+const maxLevels = 5;
+let ROWS = 5;
+let COLS = 8;
+
+function randomColor(){
+  return COLORS[Math.floor(Math.random()*COLORS.length)];
+}
 
 function initGrid(){
+  grid = [];
   for(let r=0; r<ROWS; r++){
     grid[r] = [];
     for(let c=0; c<COLS; c++){
-      grid[r][c] = COLORS[Math.floor(Math.random()*COLORS.length)];
+      grid[r][c] = randomColor();
     }
   }
 }
@@ -66,6 +83,13 @@ function drawShooter(){
   ctx.arc(shooter.x, shooter.y, RADIUS, 0, Math.PI*2);
   ctx.fillStyle = shooter.color;
   ctx.fill();
+
+  // Draw aiming line
+  ctx.strokeStyle = '#fff';
+  ctx.beginPath();
+  ctx.moveTo(shooter.x, shooter.y);
+  ctx.lineTo(shooter.x + Math.cos(shooter.angle)*50, shooter.y + Math.sin(shooter.angle)*50);
+  ctx.stroke();
 }
 
 function drawBullet(){
@@ -78,16 +102,32 @@ function drawBullet(){
 }
 
 function shoot(){
-  if(!bullet){
-    bullet = { x: shooter.x, y: shooter.y - RADIUS, color: shooter.color, vy: -5 };
-    shooter.color = COLORS[Math.floor(Math.random()*COLORS.length)];
+  if(!bullet && !gameOver){
+    bullet = { 
+      x: shooter.x, 
+      y: shooter.y - RADIUS, 
+      color: shooter.color, 
+      vx: Math.cos(shooter.angle)*5, 
+      vy: Math.sin(shooter.angle)*5
+    };
   }
 }
 
 function update(){
   if(bullet){
+    bullet.x += bullet.vx;
     bullet.y += bullet.vy;
-    if(bullet.y < 0){ bullet = null; return; }
+
+    // Bounce on walls
+    if(bullet.x - RADIUS < 0 || bullet.x + RADIUS > canvas.width){
+      bullet.vx *= -1;
+    }
+
+    if(bullet.y < 0){
+      bullet = null;
+      shooter.color = randomColor();
+      return;
+    }
 
     for(let r=0; r<ROWS; r++){
       for(let c=0; c<COLS; c++){
@@ -97,9 +137,12 @@ function update(){
           const dx = bullet.x - bx;
           const dy = bullet.y - by;
           if(Math.sqrt(dx*dx + dy*dy) < RADIUS*2){
-            grid[r][c] = bullet.color;
+            if(grid[r][c] === bullet.color){
+              grid[r][c] = null; // Remove the matched bubble
+            }
             bullet = null;
-            checkMatches(r,c);
+            shooter.color = randomColor();
+            checkWin();
             return;
           }
         }
@@ -108,25 +151,28 @@ function update(){
   }
 }
 
-function checkMatches(row,col){
-  const color = grid[row][col];
-  let stack = [[row,col]];
-  let visited = Array.from({length:ROWS},()=>Array(COLS).fill(false));
-  let cluster = [];
-
-  while(stack.length){
-    let [r,c] = stack.pop();
-    if(r<0||c<0||r>=ROWS||c>=COLS) continue;
-    if(visited[r][c] || grid[r][c]!==color) continue;
-    visited[r][c] = true;
-    cluster.push([r,c]);
-    stack.push([r+1,c],[r-1,c],[r,c+1],[r,c-1]);
-  }
-
-  if(cluster.length>=3){
-    for(let [r,c] of cluster){
-      grid[r][c] = null;
+function checkWin(){
+  for(let r=0; r<ROWS; r++){
+    for(let c=0; c<COLS; c++){
+      if(grid[r][c]) return;
     }
+  }
+  nextLevel();
+}
+
+function nextLevel(){
+  if(level < maxLevels){
+    level++;
+    ROWS += 2;
+    COLS += 2;
+    if(ROWS > 12) ROWS = 12;
+    if(COLS > 12) COLS = 12;
+    initGrid();
+    shooter.color = randomColor();
+    statusDiv.innerText = `Level ${level}`;
+  } else {
+    gameOver = true;
+    statusDiv.innerText = "You Beat All Levels!";
   }
 }
 
@@ -135,6 +181,9 @@ function draw(){
   drawGrid();
   drawShooter();
   drawBullet();
+  ctx.fillStyle = '#fff';
+  ctx.font = '16px Arial';
+  ctx.fillText(`Level: ${level}`, 10, canvas.height - 10);
 }
 
 function loop(){
@@ -145,12 +194,12 @@ function loop(){
 
 window.addEventListener('keydown',(e)=>{
   if(e.key===' '){ shoot(); }
-  if(e.key==='ArrowLeft') shooter.x -= 10;
-  if(e.key==='ArrowRight') shooter.x += 10;
-  shooter.x = Math.max(RADIUS, Math.min(canvas.width - RADIUS, shooter.x));
+  if(e.key==='ArrowLeft'){ shooter.angle -= 0.1; }
+  if(e.key==='ArrowRight'){ shooter.angle += 0.1; }
 });
 
 initGrid();
+statusDiv.innerText = `Level ${level}`;
 loop();
 </script>
 </body>
