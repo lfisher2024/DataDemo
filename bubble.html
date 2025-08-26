@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Bubble Shooter</title>
+<title>Bubble Shooter with Sound and Mute</title>
 <style>
   body {
     margin: 0;
@@ -29,15 +29,93 @@
     text-align: center;
     width: 100%;
   }
+  .controls {
+    position: absolute;
+    bottom: 20px;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+  }
+  .btn {
+    width: 60px;
+    height: 60px;
+    background: #444;
+    color: #fff;
+    border: none;
+    border-radius: 50%;
+    font-size: 24px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    user-select: none;
+  }
+  .btn:active {
+    background: #666;
+  }
+  #muteBtn {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: #444;
+    color: #fff;
+    border: none;
+    padding: 10px;
+    border-radius: 10px;
+    font-size: 18px;
+    cursor: pointer;
+  }
+  #muteBtn:active {
+    background: #666;
+  }
 </style>
 </head>
 <body>
 <div id="status"></div>
 <canvas id="game" width="400" height="500"></canvas>
+<div class="controls">
+  <button class="btn" id="left">⟸</button>
+  <button class="btn" id="shoot">●</button>
+  <button class="btn" id="right">⟹</button>
+</div>
+<button id="muteBtn">Mute</button>
+<audio id="shootSound" src="https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg"></audio>
+<audio id="popSound" src="https://actions.google.com/sounds/v1/cartoon/pop.ogg"></audio>
+<audio id="levelSound" src="https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg"></audio>
+<audio id="bgMusic" src="https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3" loop></audio>
 <script>
 const canvas = document.getElementById('game');
 const ctx = canvas.getContext('2d');
 const statusDiv = document.getElementById('status');
+const btnLeft = document.getElementById('left');
+const btnRight = document.getElementById('right');
+const btnShoot = document.getElementById('shoot');
+const muteBtn = document.getElementById('muteBtn');
+
+const shootSound = document.getElementById('shootSound');
+const popSound = document.getElementById('popSound');
+const levelSound = document.getElementById('levelSound');
+const bgMusic = document.getElementById('bgMusic');
+
+let isMuted = false;
+
+muteBtn.addEventListener('click', () => {
+  isMuted = !isMuted;
+  if(isMuted){
+    shootSound.muted = true;
+    popSound.muted = true;
+    levelSound.muted = true;
+    bgMusic.muted = true;
+    muteBtn.innerText = 'Unmute';
+  } else {
+    shootSound.muted = false;
+    popSound.muted = false;
+    levelSound.muted = false;
+    bgMusic.muted = false;
+    muteBtn.innerText = 'Mute';
+  }
+});
 
 const RADIUS = 18;
 const COLORS = ['red', 'green', 'blue', 'yellow', 'purple'];
@@ -86,7 +164,6 @@ function drawShooter(){
   ctx.fillStyle = shooter.color;
   ctx.fill();
 
-  // Draw aiming line
   ctx.strokeStyle = '#fff';
   ctx.beginPath();
   ctx.moveTo(shooter.x, shooter.y);
@@ -112,6 +189,7 @@ function shoot(){
       vx: Math.cos(shooter.angle)*5, 
       vy: Math.sin(shooter.angle)*5
     };
+    if(!isMuted) shootSound.play();
   }
 }
 
@@ -120,7 +198,6 @@ function update(){
     bullet.x += bullet.vx;
     bullet.y += bullet.vy;
 
-    // Bounce on walls
     if(bullet.x - RADIUS < 0 || bullet.x + RADIUS > canvas.width){
       bullet.vx *= -1;
     }
@@ -140,7 +217,8 @@ function update(){
           const dy = bullet.y - by;
           if(Math.sqrt(dx*dx + dy*dy) < RADIUS*2){
             if(grid[r][c] === bullet.color){
-              grid[r][c] = null; // Remove the matched bubble
+              grid[r][c] = null;
+              if(!isMuted) popSound.play();
             }
             bullet = null;
             shooter.color = randomColor();
@@ -172,9 +250,11 @@ function nextLevel(){
     initGrid();
     shooter.color = randomColor();
     statusDiv.innerText = `Level ${level}`;
+    if(!isMuted) levelSound.play();
   } else {
     gameOver = true;
     statusDiv.innerText = "You Beat All Levels!";
+    if(!isMuted) levelSound.play();
   }
 }
 
@@ -200,23 +280,22 @@ window.addEventListener('keydown',(e)=>{
   if(e.key==='ArrowRight'){ shooter.angle += 0.1; }
 });
 
-// Touch controls
+btnLeft.addEventListener('touchstart', () => { shooter.angle -= 0.1; });
+btnRight.addEventListener('touchstart', () => { shooter.angle += 0.1; });
+btnShoot.addEventListener('touchstart', () => { shoot(); });
+
 canvas.addEventListener('touchstart', (e) => {
   if(gameOver) return;
   const touch = e.touches[0];
   const rect = canvas.getBoundingClientRect();
   const tx = touch.clientX - rect.left;
   const ty = touch.clientY - rect.top;
-  // Calculate angle toward touch point
   shooter.angle = Math.atan2(ty - shooter.y, tx - shooter.x);
-});
-
-canvas.addEventListener('touchend', () => {
-  shoot();
 });
 
 initGrid();
 statusDiv.innerText = `Level ${level}`;
+bgMusic.play();
 loop();
 </script>
 </body>
