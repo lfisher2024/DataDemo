@@ -14,11 +14,13 @@
     background: #222;
     color: #fff;
     font-family: Arial, sans-serif;
+    overflow: hidden;
   }
   canvas {
     background: #000;
     border: 2px solid #fff;
     display: block;
+    touch-action: none;
   }
   #status {
     position: absolute;
@@ -196,6 +198,21 @@ window.addEventListener('keydown',(e)=>{
   if(e.key===' '){ shoot(); }
   if(e.key==='ArrowLeft'){ shooter.angle -= 0.1; }
   if(e.key==='ArrowRight'){ shooter.angle += 0.1; }
+});
+
+// Touch controls
+canvas.addEventListener('touchstart', (e) => {
+  if(gameOver) return;
+  const touch = e.touches[0];
+  const rect = canvas.getBoundingClientRect();
+  const tx = touch.clientX - rect.left;
+  const ty = touch.clientY - rect.top;
+  // Calculate angle toward touch point
+  shooter.angle = Math.atan2(ty - shooter.y, tx - shooter.x);
+});
+
+canvas.addEventListener('touchend', () => {
+  shoot();
 });
 
 initGrid();
